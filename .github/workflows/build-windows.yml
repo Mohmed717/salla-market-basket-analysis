@@ -1,0 +1,64 @@
+name: Build Windows Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to publish to"
+        required: true
+        default: "v1.0.0"
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    name: Windows executable
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller pillow
+
+      - name: Run the test suite
+        run: python -m pytest tests/ -q
+
+      - name: Build the application icon
+        run: python scripts/build_icon.py --out assets/icon.png --ico assets/icon.ico
+
+      - name: Compile the standalone executable
+        run: python -m PyInstaller --noconfirm --clean Salla.spec
+
+      - name: Collect the release bundle
+        shell: pwsh
+        run: |
+          Copy-Item "README.md" "dist/Salla-MarketBasket/" -ErrorAction SilentlyContinue
+          Copy-Item "LICENSE" "dist/Salla-MarketBasket/" -ErrorAction SilentlyContinue
+          Compress-Archive -Path "dist/Salla-MarketBasket/*" -DestinationPath "Salla-MarketBasket-${{ github.ref_name }}-windows-x64.zip" -Force
+          Get-Item "Salla-MarketBasket-${{ github.ref_name }}-windows-x64.zip" | Format-List Name, Length
+
+      - name: Upload the bundle to the release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: Salla-MarketBasket-${{ github.ref_name }}-windows-x64.zip
+          fail_on_unmatched_files: true
+          generate_release_notes: true
+
+      - name: Upload the bundle as a workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Salla-MarketBasket-windows-x64
+          path: Salla-MarketBasket-*-windows-x64.zip
+          if-no-files-found: error
