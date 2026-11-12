@@ -61,17 +61,35 @@ def elide(text: str, limit: int = 48) -> str:
 # --------------------------------------------------------------------------
 # Buttons
 # --------------------------------------------------------------------------
+_SORT_ARROWS: tuple[str, str] | None = None
+
+
 def _sort_arrow_assets() -> tuple[str, str]:
-    """Create the small sort-indicator arrows used by the table header."""
+    """Create the small sort-indicator arrows used by the table header.
+
+    ``QPixmap`` requires a live ``QGuiApplication``, so the artwork is built
+    lazily on first use (when a table is created) rather than at import time.
+    """
+    global _SORT_ARROWS
+    if _SORT_ARROWS is not None:
+        return _SORT_ARROWS
+
     import tempfile
     from pathlib import Path
 
     folder = Path(tempfile.gettempdir()) / "salla_ui_assets"
-    folder.mkdir(parents=True, exist_ok=True)
-    paths = []
+    try:
+        folder.mkdir(parents=True, exist_ok=True)
+    except OSError:
+        return ("", "")
+
+    paths: list[str] = []
     for name, up in (("sort_up.png", True), ("sort_down.png", False)):
         target = folder / name
         if not target.exists():
+            if QGuiApplication.instance() is None:
+                # No GUI application yet: fall back to the default indicator.
+                return ("", "")
             pixmap = QPixmap(12, 12)
             pixmap.fill(Qt.GlobalColor.transparent)
             painter = QPainter(pixmap)
@@ -92,7 +110,9 @@ def _sort_arrow_assets() -> tuple[str, str]:
             painter.end()
             pixmap.save(str(target))
         paths.append(str(target))
-    return paths[0], paths[1]
+
+    _SORT_ARROWS = (paths[0], paths[1])
+    return _SORT_ARROWS
 
 
 def paint_button_content(
@@ -554,9 +574,15 @@ class NavButton(QPushButton):
 # --------------------------------------------------------------------------
 # Tables
 # --------------------------------------------------------------------------
-_SORT_UP, _SORT_DOWN = _sort_arrow_assets()
-
-TABLE_QSS = f"""
+def table_qss() -> str:
+    """The table stylesheet, including the sort indicators when available."""
+    sort_up, sort_down = _sort_arrow_assets()
+    arrows = ""
+    if sort_up and sort_down:
+        arrows = f"""
+QHeaderView::up-arrow {{ image: url({sort_up}); width: 11px; height: 11px; }}
+QHeaderView::down-arrow {{ image: url({sort_down}); width: 11px; height: 11px; }}"""
+    return f"""
 QTableView {{
     background: {brand.CARD};
     alternate-background-color: #F8FAFC;
@@ -585,8 +611,7 @@ QHeaderView::section {{
     font-size: 12px;
 }}
 QTableCornerButton::section {{ background: {brand.NAVY}; border: none; }}
-QHeaderView::up-arrow {{ image: url({_SORT_UP}); width: 11px; height: 11px; }}
-QHeaderView::down-arrow {{ image: url({_SORT_DOWN}); width: 11px; height: 11px; }}
+{arrows}
 """
 
 
@@ -603,7 +628,7 @@ def make_table(headers: Sequence[str], rows: Iterable[Sequence[str]], max_rows: 
     table.setShowGrid(False)
     table.setWordWrap(False)
     table.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
-    table.setStyleSheet(TABLE_QSS)
+    table.setStyleSheet(table_qss())
     table.verticalHeader().setVisible(False)
     table.verticalHeader().setDefaultSectionSize(36)
     table.horizontalHeader().setHighlightSections(False)
