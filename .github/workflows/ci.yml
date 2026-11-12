@@ -27,8 +27,13 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            libegl1 libgl1 libxkbcommon-x11-0 libdbus-1-3 libfontconfig1 \
-            fonts-noto-core fonts-noto-arabic
+            libegl1 libgl1 libxkbcommon-x11-0 libdbus-1-3 libfontconfig1
+
+      - name: Install Arabic fonts (Linux)
+        if: runner.os == 'Linux'
+        continue-on-error: true
+        run: |
+          sudo apt-get install -y --no-install-recommends fonts-noto-core || true
 
       - name: Install dependencies
         run: |
@@ -51,12 +56,16 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install Qt system libraries and Arabic fonts
+      - name: Install Qt system libraries
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            libegl1 libgl1 libxkbcommon-x11-0 libdbus-1-3 libfontconfig1 \
-            fonts-noto-core fonts-noto-arabic
+            libegl1 libgl1 libxkbcommon-x11-0 libdbus-1-3 libfontconfig1
+
+      - name: Install Arabic fonts
+        continue-on-error: true
+        run: |
+          sudo apt-get install -y --no-install-recommends fonts-noto-core || true
 
       - name: Install dependencies
         run: |

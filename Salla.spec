@@ -7,7 +7,7 @@ Windows and Linux (the ``--add-data`` separator differs between platforms).
 
 import os
 
-from PyInstaller.utils.hooks import collect_all
+from PyInstaller.utils.hooks import collect_all, collect_submodules
 
 ROOT = os.path.abspath(os.getcwd())
 
@@ -17,6 +17,8 @@ datas = [
 ]
 binaries = []
 hiddenimports = ["arabic_reshaper", "bidi", "matplotlib.backends.backend_qtagg"]
+hiddenimports += collect_submodules("app")
+hiddenimports += collect_submodules("mba")
 
 pkg_datas, pkg_binaries, pkg_hidden = collect_all("matplotlib")
 datas += pkg_datas
