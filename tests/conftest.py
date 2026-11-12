@@ -12,7 +12,11 @@ from pathlib import Path
 
 import pytest
 
-os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+# Qt's offscreen plugin needs no display, which is what CI runners have.
+# Windows runners expose a real window station, so the native plugin is used
+# there instead (the offscreen build is not available on every wheel).
+if sys.platform.startswith("linux"):
+    os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
