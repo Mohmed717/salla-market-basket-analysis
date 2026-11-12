@@ -35,6 +35,9 @@ jobs:
         run: python -m pytest tests/test_apriori.py tests/test_loader.py -q
 
       - name: Build the application icon
+        # A pre-built icon is committed to the repository, so a failure here
+        # only means the committed artwork is used instead.
+        continue-on-error: true
         run: python scripts/build_icon.py --out assets/icon.png --ico assets/icon.ico
 
       - name: Compile the standalone executable

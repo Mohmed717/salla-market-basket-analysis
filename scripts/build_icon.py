@@ -11,7 +11,10 @@ import os
 import sys
 from pathlib import Path
 
-os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+# The offscreen plugin is unavailable on some Windows builds, where the
+# native platform plugin is used instead.
+if sys.platform.startswith("linux") or sys.platform == "darwin":
+    os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
